@@ -1,0 +1,17 @@
+{
+  "name": "hitzerisiko-geo-proxy",
+  "version": "1.0.0",
+  "description": "Minimaler Proxy-Server für Swisstopo/BFE Geodienste (umgeht mögliche CORS-Einschränkungen im Browser)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
