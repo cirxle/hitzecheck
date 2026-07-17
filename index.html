@@ -1855,12 +1855,18 @@
   buildings.forEach(function(b){ applyScores(b); });
   var LS_PREFIX = 'hitzerisiko_portfolio:';
 
+  // IDs koennen numerisch (aktuelle Version) oder String (aeltere gespeicherte
+  // Eintraege) sein. Vergleich daher typunabhaengig ueber String-Normalisierung,
+  // sonst schlaegt die Portfolio-Auswahl bei String-IDs fehl und es wird immer
+  // derselbe (Fallback-)Eintrag angezeigt.
+  function sameId(a, b) { return String(a) === String(b); }
+
   (async function(){
     var persisted = await loadPersistedPortfolioEntries();
     if (!persisted.length) return;
     persisted.forEach(function(p){
       applyScores(p);
-      if (!buildings.find(function(b){ return b.id === p.id; })) buildings.push(p);
+      if (!buildings.find(function(b){ return sameId(b.id, p.id); })) buildings.push(p);
     });
     renderShell();
   })();
@@ -1909,7 +1915,7 @@
     var addrParts = (live.address || '').split(',');
     var city = addrParts.length > 1 ? addrParts[addrParts.length - 1].trim() : '';
     var addr = addrParts[0].trim();
-    var newId = existingId || (buildings.reduce(function(m, b){ return Math.max(m, b.id); }, 0) + 1);
+    var newId = existingId || (buildings.reduce(function(m, b){ return Math.max(m, Number(b.id) || 0); }, 0) + 1);
     var snapshot;
     try { snapshot = JSON.parse(JSON.stringify(live)); } catch (e) { snapshot = null; }
     return {
@@ -1985,11 +1991,11 @@
   window.addLiveAddressToPortfolio = addLiveAddressToPortfolio;
 
   async function deletePortfolioEntry(id) {
-    var idx = buildings.findIndex(function(b){ return b.id === id; });
+    var idx = buildings.findIndex(function(b){ return sameId(b.id, id); });
     if (idx === -1) return;
     buildings.splice(idx, 1);
     await deletePortfolioEntryStorage(id);
-    if (pfState.selected === id) pfState.selected = buildings.length ? buildings[0].id : null;
+    if (sameId(pfState.selected, id)) pfState.selected = buildings.length ? buildings[0].id : null;
     renderPortfolio();
   }
   window.deletePortfolioEntry = function(id){
@@ -1999,7 +2005,7 @@
   // Aktualisiert einen bestehenden Live-Portfolio-Eintrag: löst eine frische Adresssuche
   // aus und speichert automatisch, sobald die wichtigsten Live-Daten geladen sind.
   function refreshPortfolioEntry(id) {
-    var entry = buildings.find(function(b){ return b.id === id; });
+    var entry = buildings.find(function(b){ return sameId(b.id, id); });
     if (!entry || !entry.isLive) return;
     topState.activeTab = 'live';
     renderShell();
@@ -2049,7 +2055,7 @@
     var highCount = buildings.filter(function(b){ return b.score >= 70; }).length;
     var segCount = {};
     buildings.forEach(function(b){ segCount[b.segment] = (segCount[b.segment]||0)+1; });
-    var sel = buildings.find(function(b){ return b.id === pfState.selected; }) || visible[0] || buildings[0];
+    var sel = buildings.find(function(b){ return sameId(b.id, pfState.selected); }) || visible[0] || buildings[0];
 
     var html = '<div class="kpis">';
     html += '<div class="kpi"><div class="label">Gebäude im Portfolio</div><div class="value">' + buildings.length + '</div></div>';
@@ -2078,9 +2084,9 @@
           + ' · Neigung ' + Math.round(sel.neigung) + '°</div></div>';
     if (sel.isLive) {
       html += '<div style="display:flex;gap:6px">'
-            + '<button type="button" onclick="refreshPortfolioEntry(' + sel.id + ')" '
+            + '<button type="button" onclick="refreshPortfolioEntry(\'' + sel.id + '\')" '
             + 'style="padding:6px 10px;background:#fff;color:#2E5266;border:1px solid #C9CDC3;border-radius:6px;font-size:11.5px;cursor:pointer">Aktualisieren</button>'
-            + '<button type="button" onclick="deletePortfolioEntry(' + sel.id + ')" '
+            + '<button type="button" onclick="deletePortfolioEntry(\'' + sel.id + '\')" '
             + 'style="padding:6px 10px;background:#fff;color:#B23A2E;border:1px solid #C9CDC3;border-radius:6px;font-size:11.5px;cursor:pointer">Löschen</button>'
             + '</div>';
     }
@@ -2155,8 +2161,8 @@
     for (var i=0;i<chips.length;i++) chips[i].onclick = function(){ pfState.filter = this.getAttribute('data-filter'); renderPortfolio(); };
     var items = document.querySelectorAll('#portfolio-wrap .list-item');
     for (var j=0;j<items.length;j++) items[j].onclick = function(){
-      var newId = parseInt(this.getAttribute('data-id'));
-      if (newId !== pfState.selected) pfState.liveSubTab = 'summary';
+      var newId = this.getAttribute('data-id');
+      if (!sameId(newId, pfState.selected)) pfState.liveSubTab = 'summary';
       pfState.selected = newId;
       renderPortfolio();
     };
