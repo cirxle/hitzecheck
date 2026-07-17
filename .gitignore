@@ -1,0 +1,11 @@
+# IDE (IntelliJ / WebStorm)
+.idea/
+*.iml
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
